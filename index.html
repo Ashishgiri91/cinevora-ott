@@ -1,1 +1,359 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CineVora Films OTT</title>
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: #08090c; color: #fff; padding-bottom: 75px; overflow-x: hidden; user-select: none; }
+
+        /* Top Bar */
+        .top-bar { position: fixed; top: 0; left: 0; right: 0; height: 55px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: linear-gradient(180deg, rgba(8,9,12,0.98) 0%, rgba(8,9,12,0.6) 80%, transparent 100%); z-index: 50; }
+        .brand { display: flex; align-items: center; gap: 8px; }
+        .brand-text { font-size: 20px; font-weight: 900; letter-spacing: 1.5px; background: linear-gradient(45deg, #e50914, #ff4d4d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .ott-tag { background: #e50914; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 3px; }
+        .top-actions { display: flex; align-items: center; gap: 12px; }
+        .btn-vip-gold { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: #000; font-size: 11px; font-weight: 900; padding: 4px 10px; border-radius: 20px; border: none; cursor: pointer; }
+        .search-trigger { font-size: 18px; cursor: pointer; color: #d1d5db; }
+
+        /* Search Overlay */
+        #searchBox { display: none; position: fixed; top: 55px; left: 0; right: 0; background: #11141c; padding: 12px 16px; border-bottom: 1px solid #222634; z-index: 49; }
+        #searchBox input { width: 100%; padding: 10px 14px; background: #08090c; border: 1px solid #333; color: #fff; border-radius: 6px; outline: none; font-size: 14px; }
+
+        /* Pages / Views */
+        .app-view { display: none; }
+        .app-view.active { display: block; }
+
+        /* Hero Spotlight */
+        .hero { position: relative; width: 100%; height: 58vh; background: #111; overflow: hidden; }
+        .hero-img { width: 100%; height: 100%; object-fit: cover; }
+        .hero-shade { position: absolute; inset: 0; background: linear-gradient(0deg, #08090c 12%, rgba(8,9,12,0.2) 60%, rgba(8,9,12,0.8) 100%); }
+        .hero-details { position: absolute; bottom: 16px; left: 16px; right: 16px; text-align: center; }
+        .hero-meta { font-size: 11px; color: #9ca3af; margin-bottom: 6px; }
+        .hero-title { font-size: 24px; font-weight: 900; line-height: 1.2; text-shadow: 0 3px 8px rgba(0,0,0,0.9); }
+        .hero-btns { display: flex; justify-content: center; gap: 12px; margin-top: 12px; }
+        .btn-play-hero { background: #fff; color: #000; border: none; font-weight: 800; font-size: 14px; padding: 10px 24px; border-radius: 6px; cursor: pointer; }
+        .btn-list-hero { background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); color: #fff; border: 1px solid rgba(255,255,255,0.3); font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
+
+        /* Shelves / Rows */
+        .shelf { margin: 20px 0; }
+        .shelf-header { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 10px 16px; }
+        .shelf-title { font-size: 16px; font-weight: 800; letter-spacing: 0.3px; }
+        .cards-slider { display: flex; gap: 10px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+        .cards-slider::-webkit-scrollbar { display: none; }
+
+        /* OTT Movie Card */
+        .ott-card { flex: 0 0 120px; position: relative; border-radius: 8px; overflow: hidden; background: #13151c; cursor: pointer; border: 1px solid #1a1e29; }
+        .ott-card img { width: 120px; height: 170px; object-fit: cover; display: block; }
+        .card-tag { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 3px; }
+        .vip-tag { position: absolute; top: 6px; right: 6px; background: #f59e0b; color: #000; font-size: 8px; font-weight: 900; padding: 2px 5px; border-radius: 3px; }
+        .card-info { padding: 6px 8px; }
+        .card-title { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+
+        /* Fullscreen Player Modal */
+        #playerModal { display: none; position: fixed; inset: 0; background: #08090c; z-index: 1000; flex-direction: column; }
+        .player-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #0d0f14; border-bottom: 1px solid #1a1e29; }
+        .player-content { padding: 16px; flex: 1; overflow-y: auto; }
+        .ad-box { margin-top: 20px; padding: 14px; border: 1px dashed #374151; background: #11141c; border-radius: 8px; text-align: center; }
+
+        /* VIP Subscription Sheet */
+        #vipModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); z-index: 1001; justify-content: center; align-items: center; padding: 20px; }
+        .vip-box { background: #141721; border: 1px solid #f59e0b; border-radius: 12px; padding: 20px; width: 100%; max-width: 360px; text-align: center; }
+        .vip-plan { background: #1b202e; border: 1px solid #333a4d; border-radius: 8px; padding: 12px; margin: 12px 0; text-align: left; }
+
+        /* Bottom Nav Dock */
+        .bottom-dock { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: rgba(10,12,16,0.98); border-top: 1px solid #1a1e29; display: flex; justify-content: space-around; align-items: center; z-index: 90; }
+        .dock-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: #6b7280; background: none; border: none; cursor: pointer; }
+        .dock-btn.active { color: #e50914; }
+        .dock-btn.vip { color: #f59e0b; }
+        .dock-btn span:first-child { font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="top-bar">
+        <div class="brand">
+            <span class="brand-text">CINEVORA</span>
+            <span class="ott-tag">ORIGINALS</span>
+        </div>
+        <div class="top-actions">
+            <button class="btn-vip-gold" onclick="openVipModal()">👑 VIP</button>
+            <span class="search-trigger" onclick="toggleSearch()">🔍</span>
+        </div>
+    </div>
+
+    <!-- Live In-App Search -->
+    <div id="searchBox">
+        <input type="text" id="searchInput" placeholder="Search movies, web series..." onkeyup="filterShows()">
+    </div>
+
+    <!-- VIEW 1: HOME -->
+    <div id="viewHome" class="app-view active">
+        <!-- Spotlight Hero -->
+        <div class="hero">
+            <img id="heroImg" class="hero-img" src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1000" alt="Hero">
+            <div class="hero-shade"></div>
+            <div class="hero-details">
+                <div class="hero-meta">Trending #1 • Action & Thriller • 4K UHD</div>
+                <h1 class="hero-title" id="heroTitle">CineVora Mega Premiere</h1>
+                <div class="hero-btns">
+                    <button class="btn-play-hero" id="heroPlayBtn">▶ Play Now</button>
+                    <button class="btn-list-hero" onclick="openVipModal()">👑 Get VIP</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shelf 1: Latest Releases -->
+        <div class="shelf">
+            <div class="shelf-header">
+                <span class="shelf-title">🔥 Latest Releases</span>
+            </div>
+            <div class="cards-slider" id="latestShelf"></div>
+        </div>
+
+        <!-- Shelf 2: Trending Movies -->
+        <div class="shelf">
+            <div class="shelf-header">
+                <span class="shelf-title">⭐ Trending Blockbusters</span>
+            </div>
+            <div class="cards-slider" id="trendingShelf"></div>
+        </div>
+
+        <!-- Shelf 3: Web Series -->
+        <div class="shelf">
+            <div class="shelf-header">
+                <span class="shelf-title">📺 Popular Web Series</span>
+            </div>
+            <div class="cards-slider" id="seriesShelf"></div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: ALL MOVIES -->
+    <div id="viewMovies" class="app-view" style="padding: 70px 16px 20px 16px;">
+        <h2 style="font-size:20px; font-weight:800; margin-bottom:14px;">All Movies Catalog</h2>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;" id="allMoviesGrid"></div>
+    </div>
+
+    <!-- VIEW 3: WEB SERIES -->
+    <div id="viewSeries" class="app-view" style="padding: 70px 16px 20px 16px;">
+        <h2 style="font-size:20px; font-weight:800; margin-bottom:14px;">Original Serials & Shows</h2>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;" id="allSeriesGrid"></div>
+    </div>
+
+    <!-- VIEW 4: ACCOUNT / SETTINGS -->
+    <div id="viewAccount" class="app-view" style="padding: 75px 16px 20px 16px;">
+        <div style="background:#13151c; border:1px solid #1f222e; border-radius:12px; padding:20px; text-align:center;">
+            <div style="width:60px; height:60px; border-radius:50%; background:#e50914; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; font-size:22px; font-weight:bold;">C</div>
+            <h3 style="font-size:18px;">CineVora Member</h3>
+            <p style="font-size:12px; color:#9ca3af; margin-top:2px;">Free Tier Plan</p>
+            <button onclick="openVipModal()" style="margin-top:14px; background:#f59e0b; color:#000; border:none; padding:8px 16px; font-weight:bold; border-radius:20px; font-size:12px;">Upgrade to VIP Pass</button>
+        </div>
+        <div style="margin-top:20px; background:#13151c; border-radius:12px; border:1px solid #1f222e; overflow:hidden;">
+            <div style="padding:14px 16px; border-bottom:1px solid #1f222e; font-size:14px; display:flex; justify-content:space-between;"><span>App Version</span><span style="color:#6b7280;">v1.0.0 OTT</span></div>
+            <div style="padding:14px 16px; border-bottom:1px solid #1f222e; font-size:14px; display:flex; justify-content:space-between;"><span>Server Status</span><span style="color:#10b981;">Online (Fast CDN)</span></div>
+            <div style="padding:14px 16px; font-size:14px; color:#e50914;" onclick="location.reload()">Clear Cache & Reload</div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Dock -->
+    <nav class="bottom-dock">
+        <button class="dock-btn active" onclick="switchTab('viewHome', this)"><span>🏠</span><span>Home</span></button>
+        <button class="dock-btn" onclick="switchTab('viewMovies', this)"><span>🎬</span><span>Movies</span></button>
+        <button class="dock-btn" onclick="switchTab('viewSeries', this)"><span>📺</span><span>Series</span></button>
+        <button class="dock-btn vip" onclick="openVipModal()"><span>👑</span><span>VIP</span></button>
+        <button class="dock-btn" onclick="switchTab('viewAccount', this)"><span>👤</span><span>Account</span></button>
+    </nav>
+
+    <!-- Video Player Screen -->
+    <div id="playerModal">
+        <div class="player-head">
+            <span style="font-size:14px; font-weight:800; color:#e50914;">CINEVORA PLAYER</span>
+            <button onclick="closePlayer()" style="background:#222; border:none; color:#fff; width:28px; height:28px; border-radius:50%; font-weight:bold; cursor:pointer;">✕</button>
+        </div>
+        <div style="width:100%; height:230px; background:#000;">
+            <video id="cinevoraPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" style="width:100%; height:100%;"></video>
+        </div>
+        <div class="player-content">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span id="pBadge" style="font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px;"></span>
+                <span id="pDuration" style="font-size:12px; color:#9ca3af;"></span>
+            </div>
+            <h2 id="pTitle" style="font-size:20px; font-weight:800; margin-top:6px;"></h2>
+            <p id="pDesc" style="font-size:13px; color:#9ca3af; line-height:1.6; margin-top:6px;"></p>
+
+            <div id="adArea" class="ad-box">
+                <span style="font-size:10px; color:#e50914; font-weight:bold;">ADVERTISEMENT</span>
+                <p style="font-size:12px; color:#9ca3af; margin-top:2px;">Google AdMob Adaptive In-Stream Banner</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIP Modal -->
+    <div id="vipModal">
+        <div class="vip-box">
+            <h2 style="color:#f59e0b; font-size:20px; font-weight:900;">👑 CineVora VIP Pass</h2>
+            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">Watch exclusive films & web series with zero ads.</p>
+            
+            <div class="vip-plan">
+                <div style="display:flex; justify-content:space-between; font-weight:bold;"><span>Monthly VIP</span><span>₹99 / mo</span></div>
+                <p style="font-size:11px; color:#9ca3af; margin-top:4px;">All Movies & Web Series in 4K HDR</p>
+            </div>
+
+            <div class="vip-plan" style="border-color:#f59e0b; background:#241d14;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; color:#f59e0b;"><span>Yearly Super Saver</span><span>₹499 / yr</span></div>
+                <p style="font-size:11px; color:#d1d5db; margin-top:4px;">Full VIP Access + Offline Download</p>
+            </div>
+
+            <button onclick="alert('Payment Gateway Integration Ready!')" style="width:100%; background:linear-gradient(45deg, #f59e0b, #fbbf24); border:none; padding:12px; border-radius:6px; font-weight:bold; color:#000; font-size:14px; margin-top:8px;">Subscribe Now</button>
+            <button onclick="closeVipModal()" style="width:100%; background:none; border:none; color:#6b7280; font-size:12px; margin-top:10px; cursor:pointer;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://cinevorafilms.in/ott/api.php?action=home";
+        let vPlayer = null;
+        let allShowsData = [];
+
+        // Standalone sample data
+        const dummyCatalogue = [
+            { id: 1, title: "The Mafia of Mumbai", category: "Movie", poster_url: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400", duration: "2h 15m", is_premium_only: 0, rating: "HD", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+            { id: 2, title: "Shadow Hunter", category: "Movie", poster_url: "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=400", duration: "1h 50m", is_premium_only: 1, rating: "4K", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+            { id: 3, title: "Dark Nights: Delhi", category: "Web Series", poster_url: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400", duration: "S1 (8 Eps)", is_premium_only: 0, rating: "HD", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+            { id: 4, title: "Love in Goa", category: "Movie", poster_url: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400", duration: "2h 05m", is_premium_only: 0, rating: "HD", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+            { id: 5, title: "Cyber Crime Squad", category: "Web Series", poster_url: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=400", duration: "S2 (6 Eps)", is_premium_only: 1, rating: "4K", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            vPlayer = videojs('cinevoraPlayer');
+            initApp();
+        });
+
+        async function initApp() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                
+                const movies = (data.movies && data.movies.length) ? data.movies : dummyCatalogue.filter(x => x.category === 'Movie');
+                const series = (data.series && data.series.length) ? data.series : dummyCatalogue.filter(x => x.category === 'Web Series');
+                
+                allShowsData = [...movies, ...series];
+
+                if (data.banners && data.banners.length > 0) {
+                    const hero = data.banners[0];
+                    document.getElementById('heroImg').src = hero.banner_url;
+                    document.getElementById('heroTitle').innerText = hero.title;
+                    document.getElementById('heroPlayBtn').onclick = () => startStreaming(hero);
+                } else {
+                    document.getElementById('heroPlayBtn').onclick = () => startStreaming(allShowsData[0]);
+                }
+
+                renderRow('latestShelf', allShowsData);
+                renderRow('trendingShelf', movies);
+                renderRow('seriesShelf', series);
+
+                renderGrid('allMoviesGrid', movies);
+                renderGrid('allSeriesGrid', series);
+            } catch (e) {
+                allShowsData = dummyCatalogue;
+                renderRow('latestShelf', dummyCatalogue);
+                renderRow('trendingShelf', dummyCatalogue.filter(x => x.category === 'Movie'));
+                renderRow('seriesShelf', dummyCatalogue.filter(x => x.category === 'Web Series'));
+                renderGrid('allMoviesGrid', dummyCatalogue.filter(x => x.category === 'Movie'));
+                renderGrid('allSeriesGrid', dummyCatalogue.filter(x => x.category === 'Web Series'));
+            }
+        }
+
+        function renderRow(containerId, items) {
+            const el = document.getElementById(containerId);
+            el.innerHTML = '';
+            items.forEach(item => {
+                const card = createCard(item);
+                el.appendChild(card);
+            });
+        }
+
+        function renderGrid(containerId, items) {
+            const el = document.getElementById(containerId);
+            el.innerHTML = '';
+            items.forEach(item => {
+                const card = createCard(item);
+                card.style.flex = "unset";
+                card.style.width = "100%";
+                card.querySelector('img').style.width = "100%";
+                el.appendChild(card);
+            });
+        }
+
+        function createCard(item) {
+            const card = document.createElement('div');
+            card.className = "ott-card";
+            card.onclick = () => startStreaming(item);
+            card.innerHTML = `
+                <img src="${item.poster_url}" loading="lazy" />
+                <span class="card-tag">${item.rating || 'HD'}</span>
+                ${item.is_premium_only == 1 ? '<span class="vip-tag">VIP</span>' : ''}
+                <div class="card-info">
+                    <div class="card-title">${item.title}</div>
+                    <div class="card-sub">${item.duration || 'Watch Now'}</div>
+                </div>
+            `;
+            return card;
+        }
+
+        function startStreaming(item) {
+            if (item.is_premium_only == 1) {
+                openVipModal();
+                return;
+            }
+
+            document.getElementById('pTitle').innerText = item.title;
+            document.getElementById('pDuration').innerText = item.duration || 'HD Streaming';
+            document.getElementById('pDesc').innerText = item.description || 'Watch high speed uninterrupted streaming exclusively on CineVora Films.';
+            
+            const badge = document.getElementById('pBadge');
+            badge.innerText = "FREE STREAM";
+            badge.style.background = "#10b981";
+            badge.style.color = "#fff";
+            document.getElementById('adArea').style.display = 'block';
+
+            document.getElementById('playerModal').style.display = 'flex';
+            vPlayer.src({ type: 'application/x-mpegURL', src: item.stream_url || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' });
+            vPlayer.play();
+        }
+
+        function closePlayer() {
+            vPlayer.pause();
+            document.getElementById('playerModal').style.display = 'none';
+        }
+
+        function switchTab(viewId, btn) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            btn.classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function openVipModal() { document.getElementById('vipModal').style.display = 'flex'; }
+        function closeVipModal() { document.getElementById('vipModal').style.display = 'none'; }
+
+        function toggleSearch() {
+            const s = document.getElementById('searchBox');
+            s.style.display = s.style.display === 'block' ? 'none' : 'block';
+            if (s.style.display === 'block') document.getElementById('searchInput').focus();
+        }
+
+        function filterShows() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allShowsData.filter(x => x.title.toLowerCase().includes(query));
+            renderRow('latestShelf', filtered);
+        }
+    </script>
+</body>
+</html>
 
